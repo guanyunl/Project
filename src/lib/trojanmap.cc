@@ -258,7 +258,7 @@ void TrojanMap::PlotPath(std::vector<std::string> &location_ids) {
   auto start = GetPlotLocation(data[location_ids[0]].lat, data[location_ids[0]].lon);
   cv::circle(img, cv::Point(int(start.first), int(start.second)), DOT_SIZE,
              cv::Scalar(0, 0, 255), cv::FILLED);
-  for (auto i = 1; i < location_ids.size(); i++) {
+  for (auto i = 1; i < int(location_ids.size()); i++) {
     auto start = GetPlotLocation(data[location_ids[i - 1]].lat, data[location_ids[i - 1]].lon);
     auto end = GetPlotLocation(data[location_ids[i]].lat, data[location_ids[i]].lon);
     cv::circle(img, cv::Point(int(end.first), int(end.second)), DOT_SIZE,
@@ -303,7 +303,7 @@ void TrojanMap::CreateAnimation(std::vector<std::vector<std::string>> path_progr
     auto start = GetPlotLocation(data[location_ids[0]].lat, data[location_ids[0]].lon);
     cv::circle(img, cv::Point(int(start.first), int(start.second)), DOT_SIZE,
               cv::Scalar(0, 0, 255), cv::FILLED);
-    for (auto i = 1; i < location_ids.size(); i++) {
+    for (auto i = 1; i < int(location_ids.size()); i++) {
       auto start = GetPlotLocation(data[location_ids[i - 1]].lat, data[location_ids[i - 1]].lon);
       auto end = GetPlotLocation(data[location_ids[i]].lat, data[location_ids[i]].lon);
       cv::circle(img, cv::Point(int(end.first), int(end.second)), DOT_SIZE,
@@ -392,10 +392,12 @@ double TrojanMap::CalculateDistance(const Node &a, const Node &b) {
 
   // where 3961 is the approximate radius of the earth at the latitude of
   // Washington, D.C., in miles
-  int dlon = b.lon - a.lon;
-  int dlat = b.lat - a.lat;
-  int a = pow( (sin(dlat / 2)) , 2) + cos(lat1) * cos(lat2) * pow( (sin(dlon / 2)) , 2);
-  return 0;
+  double dlon = b.lon - a.lon;
+  double dlat = b.lat - a.lat;
+  double aa = pow( (sin(dlat / 2)) , 2) + cos(a.lat) * cos(b.lat) * pow( (sin(dlon / 2)) , 2);
+  double cc = 2 *asin( std::min(1.0, sqrt(aa)));
+  double dist = 3961 * cc;
+  return dist;
 }
 
 /**
@@ -406,6 +408,10 @@ double TrojanMap::CalculateDistance(const Node &a, const Node &b) {
  */
 double TrojanMap::CalculatePathLength(const std::vector<std::string> &path) {
   double sum = 0;
+  if (int(path.size()) <2 ){ return sum ;}
+  for(int i=0; i<int(path.size()-1); i++){
+    sum += CalculateDistance(data[path[i]], data[path[i+1]]);
+  }
   return sum;
 }
 
@@ -418,6 +424,15 @@ double TrojanMap::CalculatePathLength(const std::vector<std::string> &path) {
  */
 std::vector<std::string> TrojanMap::Autocomplete(std::string name) {
   std::vector<std::string> results;
+  transform(name.begin(),name.end(),name.begin(),::toupper);
+  std::map<std::string, Node>::iterator iter;
+    for(iter = data.begin(); iter != data.end(); iter++) {
+      std::string cur = iter->second.name;
+      transform(cur.begin(),cur.end(),cur.begin(),::toupper);
+      if( strncmp(cur.c_str(), name.c_str(), name.size()) == 0 ){
+        results.push_back(iter->second.name);
+      }
+    }
   return results;
 }
 
@@ -429,6 +444,13 @@ std::vector<std::string> TrojanMap::Autocomplete(std::string name) {
  */
 std::pair<double, double> TrojanMap::GetPosition(std::string name) {
   std::pair<double, double> results(-1, -1);
+  std::map<std::string, Node>::iterator iter;
+  for(iter = data.begin(); iter != data.end(); iter++) {
+    std::string cur = iter->second.name;
+    if( strcmp(cur.c_str(), name.c_str()) == 0 ){
+      results = {iter->second.lat, iter->second.lon};
+    }
+  }
   return results;
 }
 
