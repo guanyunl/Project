@@ -6,6 +6,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <cmath>
 
 // A Node is the location of one point in the map.
 class Node {
