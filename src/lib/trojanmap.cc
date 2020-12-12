@@ -464,7 +464,78 @@ std::pair<double, double> TrojanMap::GetPosition(std::string name) {
  */
 std::vector<std::string> TrojanMap::CalculateShortestPath(
     std::string location1_name, std::string location2_name) {
-  std::vector<std::string> x;
+
+  //get location id
+  std::string start, end;// get Node id from name
+  std::map<std::string, Node>::iterator iter;
+  for(iter = data.begin(); iter != data.end(); iter++) {
+    std::string cur = iter->second.name;
+    if( strcmp(cur.c_str(), location1_name.c_str()) == 0 ){
+      start = iter->second.id;
+      //std::cout << "get location1 id: " << start << std::endl;
+    }
+    if( strcmp(cur.c_str(), location2_name.c_str()) == 0 ){
+      end = iter->second.id;
+      //std::cout << "get location2 id: " << end << std::endl;
+    }
+  }
+
+  std::map<std::string ,std::string > prev;// record the path
+  std::vector<std::string> x;// return path
+
+  std::map<std::string, int> visited;
+  std::map<std::string, double> d;
+  d[start] = 0;//source
+  for (auto n: data[start].neighbors){
+    d[n] = CalculateDistance(data[start], data[n]);
+    prev[n] = start;
+    //std::cout << "Find neigh from start id: "<< n << ", distance: " <<d[n] << std::endl;
+  }
+  visited[start] = 1;
+
+  while( visited[end] == 0 ){
+  //  for(int i = 0; i<10; i++){
+      //find (u) min in d but not visited
+    std::string u = start;
+    double min = INT_MAX;
+
+    std::map<std::string, double>::iterator it;
+    for (it = d.begin(); it != d.end(); it++){
+
+      if( visited[it->first] == 0 && it->second < min ){
+        min = it->second;
+        u = it->first;
+        //std::cout << "Find min id: " << u << ", with dist: " << min << std::endl;
+      }
+      
+    }
+    if(u == start){
+      return {};
+    }
+    
+    visited[u] = 1;
+  //std::cout << "Node with id: "<< u << " is min and marked visited." << std::endl;
+
+    //update u's neighbors
+    for (auto n: data[u].neighbors){
+      if ( visited[n] == 0  ){
+        double tmp = d[u]+CalculateDistance(data[u], data[n]);
+        if (d[n] == 0 || d[n] > tmp ){
+          d[n] = tmp;
+          prev[n] = u;
+          //std::cout << "Update neigh with id: " << n << ", and prev is :" << u << " and dist: " << d[n] << std::endl;
+        }
+      }
+    }
+  }
+  std::string path = end;
+  x.push_back(end);
+  while(prev[path] != start){
+    x.push_back(prev[path]); 
+    path = prev[path];
+  }
+  x.push_back(start);
+  std::reverse(x.begin(), x.end());
   return x;
 }
 
