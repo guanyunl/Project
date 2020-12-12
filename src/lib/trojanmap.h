@@ -7,7 +7,7 @@
 #include <map>
 #include <vector>
 #include <cmath>
-#include <unordered_set>
+#include <algorithm>
 
 // A Node is the location of one point in the map.
 class Node {
@@ -91,6 +91,11 @@ class TrojanMap {
   // path.)
   std::pair<double, std::vector<std::vector<std::string>>> TravellingTrojan(
       std::vector<std::string> &location_ids);
+  
+  void permute_aux(std::vector<std::string> &location_ids, std::vector<std::vector<std::string>> &tours, std::vector<std::string> curRes);
+
+  std::pair<double, std::vector<std::vector<std::string>>> TravellingTrojan_2opt(
+                                    std::vector<std::string> &location_ids);
 
   //-----------------------------------------------------
 

@@ -134,6 +134,17 @@ void TrojanMap::PrintMenu() {
     std::cout << menu << std::endl;
     menu = "In this task, we will select N random points on the map and you need to find the path to travel these points and back to the start point.";
     std::cout << menu << std::endl << std::endl;
+
+    menu =         
+        "**************************************************************\n"
+        "* Choose algorithm:                                           \n"
+        "* 1. DFS                                                      \n"
+        "* 2. 2-opt                                                     \n"
+        "**************************************************************\n";
+    std::cout << menu;
+    getline(std::cin, input);
+    int algo = std::stoi(input);
+
     menu = "Please input the number of the places:";
     std::cout << menu;
     getline(std::cin, input);
@@ -148,7 +159,20 @@ void TrojanMap::PrintMenu() {
       locations.push_back(keys[rand() % keys.size()]);
     PlotPoints(locations);
     std::cout << "Calculating ..." << std::endl;
-    auto results = TravellingTrojan(locations);
+
+    std::pair<double, std::vector<std::vector<std::string>>> results;
+    switch (algo) 
+    {
+      case 1:
+      {
+        results = TravellingTrojan(locations);
+      }
+      case 2:
+      {
+        results = TravellingTrojan_2opt(locations);
+      }
+    }
+
     menu = "*************************Results******************************\n";
     std::cout << menu;
     CreateAnimation(results.second);
@@ -394,6 +418,7 @@ double TrojanMap::CalculateDistance(const Node &a, const Node &b) {
   // Washington, D.C., in miles
   double dlon = b.lon - a.lon;
   double dlat = b.lat - a.lat;
+  
   double aa = pow( (sin(dlat / 2)) , 2) + cos(a.lat) * cos(b.lat) * pow( (sin(dlon / 2)) , 2);
   double cc = 2 *asin( std::min(1.0, sqrt(aa)));
   double dist = 3961 * cc;
@@ -549,5 +574,118 @@ std::vector<std::string> TrojanMap::CalculateShortestPath(
 std::pair<double, std::vector<std::vector<std::string>>> TrojanMap::TravellingTrojan(
                                     std::vector<std::string> &location_ids) {
   std::pair<double, std::vector<std::vector<std::string>>> results;
+  std::vector<std::vector<std::string>> tours;
+/*
+  for(auto n:location_ids){
+      std::cout << n << " " ;
+    std::cout << std::endl;
+  }
+  std::cout << "into DFS "<< std::endl;
+*/
+  permute_aux(location_ids, tours, {});
+  /*
+  std::cout<< "All permutation "<< std::endl;
+  for(auto n:tours){
+    std::cout << "{ ";
+    for(auto m: n){
+      std::cout << m << " " ;
+    }
+    std::cout << "}" << std::endl;
+  }
+*/
+  double min = INT_MAX;
+  std::vector<std::string> path;
+  std::vector<std::vector<std::string>> res;
+  for (auto n:tours){
+    path = n;
+    path.push_back(n[0]);
+    double pathLen = CalculatePathLength(path);
+    //std::cout << "path: " << pathLen << std::endl;
+    if(pathLen < min){
+      min = pathLen;
+      res.push_back(path);
+      /*
+      std::cout << "min: "<< min << std::endl;
+      for(auto m:path){
+        std::cout << m << " " ;
+      }
+      std::cout << std::endl;
+      */
+    }
+  }
+  results.first = min;
+  results.second = res;
+
   return results;
 } 
+
+void TrojanMap::permute_aux(std::vector<std::string> &ids, std::vector<std::vector<std::string>> &tours, std::vector<std::string> curRes){
+  if(curRes.size() == ids.size() ){
+    tours.push_back(curRes);
+  }//leaf
+
+  for(int i=0; i<int(ids.size()); i++){
+    if( find(curRes.begin(), curRes.end(), ids[i]) != curRes.end() ){
+      continue;
+    }
+    std::vector<std::string> nextRes=curRes;
+    nextRes.push_back(ids[i]);
+    permute_aux(ids, tours, nextRes);
+  }
+}
+
+std::pair<double, std::vector<std::vector<std::string>>> TrojanMap::TravellingTrojan_2opt(
+                                    std::vector<std::string> &location_ids) {
+  std::pair<double, std::vector<std::vector<std::string>>> results;
+  int size = location_ids.size();
+  int maxCount = pow(size,3) + 10;
+
+  std::vector<std::string> path=location_ids;
+  std::vector<std::string> tmp=path;
+  tmp.push_back(tmp[0]);
+  double min = CalculatePathLength(tmp);
+  std::vector<std::vector<std::string>> res;
+  res.push_back(tmp);
+
+  for(int j=0; j<maxCount; j++){
+    int i = rand()%(size-1);
+    int k = rand()%(size-1);
+    if(i>k){
+      int l = i;
+      i = k;
+      k = l;
+    }
+    //std::cout << "i = " <<i << " ,k = " << k <<std::endl;
+    tmp.pop_back();
+    /*
+    std::cout << "initial tmp: "<< std::endl;
+    for(auto n: tmp){std::cout << n << " ";} std::cout << std::endl;
+*/
+    std::copy( path.begin(), path.begin()+i, tmp.begin());//copy 0 to i-1 to tmp
+
+    std::vector<std::string> rev(k-i+1);
+    std::copy(path.begin()+i, path.begin()+k+1, rev.begin());//reverse i to k
+    std::reverse(rev.begin(), rev.end());
+    std::copy(rev.begin(), rev.end(), tmp.begin()+i);//copy reverse to tmp
+
+    std::copy(path.begin()+k+1, path.end(), tmp.begin()+k+1);//copy k+1 to end to tmp
+
+    tmp.push_back(tmp[0]);
+/*
+        std::cout << "tmp after push: "<< std::endl;
+    for(auto n: tmp){std::cout << n << " ";} std::cout << std::endl;
+    std::cout << std::endl;
+*/
+    double pathLen = CalculatePathLength(tmp);
+    if(pathLen < min){
+      min = pathLen;
+      res.push_back(tmp);
+      std::copy(tmp.begin(), tmp.end()-1, path.begin());//renew the path
+    }
+  }
+
+  results.first = min;
+  results.second = res;
+
+  return results;                                    
+}

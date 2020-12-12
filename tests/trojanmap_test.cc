@@ -160,4 +160,3 @@ TEST(TrojanMapTest, TSP3) {
   
   EXPECT_EQ(flag, true);
 }
-
